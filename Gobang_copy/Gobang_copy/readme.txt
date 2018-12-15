@@ -1,7 +1,6 @@
-²©¿ÍµØÖ·£ºhttps://blog.csdn.net/ccnuacmhdu/article/details/83152946
+åšå®¢åœ°å€ï¼šhttps://blog.csdn.net/ccnuacmhdu/article/details/83152946
 
-ÈË»ú¶ÔÕ½Îå×ÓÆå²©ÎÄÒÑ¾­ÏÂÔØÏÂÀ´£¬·Åµ½ÁË¸ÃÎÄ¼ş¼ĞÖĞ£¬½¨ÒéÓÃ¹È¸èä¯ÀÀÆ÷´ò¿ª£¬·ñÔò¿ÉÄÜ¿´²»µ½Í¼Æ¬¡£
+äººæœºå¯¹æˆ˜äº”å­æ£‹åšæ–‡å·²ç»ä¸‹è½½ä¸‹æ¥ï¼Œæ”¾åˆ°äº†è¯¥æ–‡ä»¶å¤¹ä¸­ï¼Œå»ºè®®ç”¨è°·æ­Œæµè§ˆå™¨æ‰“å¼€ï¼Œå¦åˆ™å¯èƒ½çœ‹ä¸åˆ°å›¾ç‰‡ã€‚
 
-´òjar°ü·½·¨£ºhttps://blog.csdn.net/ccnuacmhdu/article/details/81013591
-´ò.exe·½·¨£ºhttps://blog.csdn.net/m0_37355951/article/details/79425901£¬Ò²¿ÉÒÔ²Î¿¼°Ù¶È¾­Ñé
-exe4jÏÂÔØµØÖ·£ºhttps://www.ej-technologies.com/download/exe4j/files
+æ‰“åŒ…æˆæœ¬åœ°æ— JDKå¯ä»¥è¿è¡Œçš„.exeå®‰è£…åŒ…ï¼š
+https://blog.csdn.net/ccnuacmhdu/article/details/83990738
