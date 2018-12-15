@@ -1,0 +1,651 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>（Java项目）人机五子棋对战</title>
+  <link rel="stylesheet" href="https://stackedit.io/style.css" />
+</head>
+
+<body class="stackedit">
+  <div class="stackedit__left">
+    <div class="stackedit__toc">
+      
+    </div>
+  </div>
+  <div class="stackedit__right">
+    <div class="stackedit__html">
+      <p>本文将在<a href="https://blog.csdn.net/ccnuacmhdu/article/details/82812832">控制台五子棋</a>的基础上继续完善，改写成具有界面的人机对战五子棋游戏。</p>
+<p><mark>项目主要内容</mark></p>
+<ul>
+<li>1、书写棋盘界面，关键是绘制棋盘和棋子</li>
+<li>2、点击棋盘下棋，绑定事件，书写机器落子核心逻辑代码。关键是判断输赢及计算每个空位评分，确定每一步机器落子位置。</li>
+</ul>
+<p>其他都是细节问题，笔者不打算赘述，具体可以参看笔者的源码。</p>
+<p><mark>项目核心算法（参考该博文的评分算法：<a href="https://blog.csdn.net/u011587401/article/details/50877828%EF%BC%89">https://blog.csdn.net/u011587401/article/details/50877828）</a></mark></p>
+<p>机器落子位置的正确选择是人机五子棋中决定机器胜负的最最重要条件。为了让机器赢，就要设计好的算法，让机器尽可能落子到最优位置。怎么确定最优位置？笔者参考了<a href="https://blog.csdn.net/u011587401/article/details/50877828">一篇博文（博文地址：https://blog.csdn.net/u011587401/article/details/50877828）</a>，采用了该博文的评分表算法。</p>
+<p>这个评分表算法的大致思路如博文中笔者描述，五子棋棋盘15X15大小，横竖斜四个方向共有572个五元组，给每个五元组一个评分，这个五元组将为它的每个位置贡献的分数就是这个五元组自身的得分。对整个棋盘来说，每个位置的得分就是该位置所在的横竖斜四个方向的所有五元组的得分之和。然后从所有空位置中选得分最高的位置就是机器落子位置了！！</p>
+<p>笔者话费两天时间完成了人机五子棋代码实现，得出的结果正如这位博主所说，我很惊讶，基本被机器打败了。。</p>
+<p><mark>效果图</mark></p>
+<p><img src="https://img-blog.csdn.net/20181020180652625?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2NjbnVhY21oZHU=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70" alt=""></p>
+<p>下面是机器先手时，与笔者的对局，结果：笔者输了。。<br>
+<img src="https://img-blog.csdn.net/20181020180852348?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2NjbnVhY21oZHU=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70" alt="在这里插入图片描述"></p>
+<p><mark>项目开发软件环境</mark><br>
+Windows10+Java8+记事本</p>
+<p><mark>项目代码架构</mark><br>
+<img src="https://img-blog.csdn.net/20181020181050552?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2NjbnVhY21oZHU=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70" alt="在这里插入图片描述"><br>
+<img src="https://img-blog.csdn.net/20181020181126372?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2NjbnVhY21oZHU=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70" alt="在这里插入图片描述"><br>
+上面图片来源自百度图片。</p>
+<p><mark>详细源代码</mark><br>
+UI.java</p>
+<pre><code>import java.awt.*;
+import javax.swing.*;
+import java.awt.event.*;
+
+//界面类，这是游戏主体框架
+public class UI{
+	
+	private JFrame frame;//五子棋游戏窗口
+	
+	//五子棋盘【关键】
+	private Chessboard chessboard = new Chessboard();//五子棋盘
+	//*****五子棋业务逻辑【关键】	
+	private Chess chess = new Chess();	
+
+	private JMenuBar menu;//菜单栏
+	private JMenu option;//菜单栏中的“选项”菜单
+	private Action replayOption;//“选项”下拉项中的“重玩一盘”选项
+	private Action AIFirstOption;//“选项”下拉项中的“机器先手”选项
+	private Action HumanFirstOption;//“选项”下拉项中的“人类先手”选项
+
+	//游戏运行入口
+	public static void main(String[] args){
+		new UI().init();
+	}	
+
+	//完成五子棋游戏界面
+	public void init(){
+
+		frame = new JFrame("人机对战五子棋");//创建游戏界面窗口
+		menu = new JMenuBar();//创建菜单栏
+		option = new JMenu("选项");//创建菜单栏中的“选项”菜单
+		
+		//把“选项”菜单加入到菜单栏
+		menu.add(option);
+		
+		//把“重玩一盘”、“机器先手”、“人类先手”加入“选项”下拉项中
+		replayOptionInit();
+		option.add(replayOption);
+		AIFirstOptionInit();
+		option.add(AIFirstOption);
+		HumanFirstOptionInit();
+		option.add(HumanFirstOption);		
+
+		frame.setJMenuBar(menu);//把menu设置为frame的菜单栏
+		frame.add(chessboard);//把五子棋盘加入到frame
+
+		//初始化棋盘
+		chessboard.init();
+		chess.init();	
+		
+		//【【【最核心】】】绑定鼠标事件，要下棋了，为了避免写无用的抽象方法的实现，用适配器
+		chessboard.addMouseListener(new MouseAdapter(){
+			public void mouseClicked(MouseEvent e){
+				//鼠标点击引发下棋事件，处理下棋事件比较繁琐，为此开一个方法
+				play(e);
+			}
+		});	
+
+		//设置frame窗口左上角图标
+		frame.setIconImage(frame.getToolkit().getImage("image/gobang.png"));
+		frame.setSize(518, 565);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		//frame.pack();
+		frame.setVisible(true);
+	}
+	
+	
+
+	//“重玩一盘”选项绑定相应的处理事件
+	public void replayOptionInit(){
+		replayOption = new AbstractAction("重玩一盘", new ImageIcon("image/replay.png")){
+			public void actionPerformed(ActionEvent e){
+				chessboard.init();//界面方面：初始化重来
+				chess.init();//逻辑业务方面：初始化重来
+			}
+		};
+	}
+
+	//“机器先手”选项绑定相应的处理事件
+	public void AIFirstOptionInit(){
+		AIFirstOption = new AbstractAction("机器先手", new ImageIcon("image/robot.png")){
+			public void actionPerformed(ActionEvent e){
+				//棋盘还没有落子的时候可以选择“机器先手”，一旦有落子，选择“机器先手”失效
+				if(chessboard.isEmpty()){
+					Chess.FIRST = -1;
+					//机器先手，则先在中间位置下一个棋子
+					chessboard.addChessman(7, 7, -1);
+					chess.addChessman(7, 7, -1);
+				}
+			}
+		};
+	}
+
+	//“人类先手”选项绑定相应的处理事件
+	public void HumanFirstOptionInit(){
+		HumanFirstOption = new AbstractAction("人类先手", new ImageIcon("image/human.png")){
+			public void actionPerformed(ActionEvent e){
+				//棋盘还没有落子的时候可以选择“人类先手”，一旦有落子，选择“人类先手”失效
+				if(chessboard.isEmpty()){	
+					Chess.FIRST = 1;
+				}
+			}
+		};
+	}
+	
+	//【【【核心业务逻辑】】】处理鼠标落子事件
+	public void play(MouseEvent e){
+		int cellSize = chessboard.getCellSize();//每个格子的边长
+		int x = (e.getX() - 5) / cellSize;//像素值转换成棋盘坐标
+		int y = (e.getY() - 5) / cellSize;//像素值转换成棋盘坐标
+		//判断落子是否合法
+		boolean isLegal = chess.isLegal(x, y);
+		//如果落子合法
+		if(isLegal){
+			chessboard.addChessman(x, y, 1);//界面方面加一个棋子
+			chess.addChessman(x, y, 1);//逻辑业务方面加一个棋子
+			
+			//判断人类是否胜利
+			if(chess.isWin(x, y, 1)){
+				JOptionPane.showMessageDialog(frame, "人类获胜", "Congratulations，您赢了！", JOptionPane.PLAIN_MESSAGE);
+				chessboard.init();
+				chess.init();
+				return;
+			}
+			
+			//机器落子
+			Location loc = chess.searchLocation();
+			chessboard.addChessman(loc);
+			chess.addChessman(loc.getX(), loc.getY(), loc.getOwner());
+
+			//判断机器是否胜利
+			if(chess.isWin(loc.getX(), loc.getY(), -1)){
+				JOptionPane.showMessageDialog(frame, "机器获胜", "Congratulations，您输了！", JOptionPane.PLAIN_MESSAGE);
+				chessboard.init();
+				chess.init();
+				return;
+			}
+		}
+	}
+	
+}
+</code></pre>
+<p>Chessboard.java</p>
+<pre><code>import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+
+import java.util.*;
+
+public class Chessboard extends JPanel{
+
+	public static final int CHESSBOARD_SIZE = 15;//棋盘大小15X15
+	private ArrayList&lt;Location&gt; locationList = new ArrayList&lt;&gt;();//棋盘上所有可以落子的位置坐标等信息
+	private Color backgroundColor = new Color(255, 245, 186);//棋盘背景色
+	private Color lineColor = new Color(66, 66, 66);//棋盘线条颜色
+	private int margin = 20;//棋盘边缘长度
+	//private int cellSize = (this.getWidth() - 2*margin)/(CHESSBOARD_SIZE - 1);//每个格子的边长，这么做是错的！！
+
+	//初始化棋盘
+	public void init(){
+		locationList.clear();
+		repaint();
+	}
+	
+	//覆盖paint方法
+	public void paint(Graphics g){
+		super.paint(g);
+		drawChessboard(g);
+		drawChessman(g);
+	}
+
+	//画棋盘
+	public void drawChessboard(Graphics g){
+		//先画背景
+		g.setColor(backgroundColor);
+		g.fillRect(0, 0, this.getWidth(), this.getHeight());
+
+		//画线
+		g.setColor(lineColor);
+		int cellSize = (this.getWidth() - 2*margin)/(CHESSBOARD_SIZE - 1);//每个格子的边长
+		for(int i = 0; i &lt; CHESSBOARD_SIZE; i++){
+			g.drawLine(margin, margin + i*cellSize, this.getWidth() - margin, margin + i*cellSize);//画横线
+			g.drawLine(margin + i*cellSize, margin, margin + i*cellSize, this.getHeight() - margin);//画纵线
+		}
+	}
+	
+	//画棋子
+	public void drawChessman(Graphics g){
+		for(int i = 0; i &lt; locationList.size(); i++){
+			Location loc = locationList.get(i);
+			//根据先后手设置棋子为黑色和白色
+			if(loc.getOwner() == Chess.FIRST){
+				g.setColor(Color.BLACK);	
+			}else{
+				g.setColor(Color.WHITE);
+			}
+			
+			int cellSize = (this.getWidth() - 2*margin)/(CHESSBOARD_SIZE - 1);//每个格子的边长
+			//画棋子
+			g.fillOval(margin + cellSize*loc.getX() - cellSize/2, margin + cellSize*loc.getY() - cellSize/2, cellSize, cellSize);
+			
+		}
+	}
+
+	//落子
+	public void addChessman(int x, int y, int owner){
+		locationList.add(new Location(x, y, owner));
+		repaint();
+	}
+
+	//落子
+	public void addChessman(Location loc){
+		locationList.add(loc);
+		repaint();
+	}
+
+	//计算棋盘每个小格子的大小
+	public int getCellSize(){
+		return (this.getWidth() - 2*margin)/(CHESSBOARD_SIZE - 1);
+	}
+	
+	//判断棋盘是否还没有棋子
+	public boolean isEmpty(){
+		return locationList.size() == 0 ? true : false;
+	}
+}
+</code></pre>
+<p>Location.java</p>
+<pre><code>
+public class Location{
+
+	private int x;//某个棋盘位置横坐标，0-14
+	private int y;//某个棋盘位置纵坐标，0-14
+	
+	private int owner;//占据该位置的棋手方，1是人类，-1是机器，0是空
+	private int score;//对该位置的打的分数
+
+	public Location(){}
+	public Location(int x, int y, int owner){
+		this.x = x;
+		this.y = y;
+		this.owner = owner;
+	}
+	public Location(int x, int y, int owner, int score){
+		this(x, y, owner);
+		this.score = score;
+	}
+
+	public int getX(){return this.x;}
+	public void setX(int x){this.x = x;}
+	
+	public int getY(){return this.y;} 
+	public void setY(int y){this.y = y;}
+
+	public int getOwner(){return this.owner;}
+	public void setOwner(int owner){this.owner = owner;}
+
+	public int getScore(){return this.score;}
+	public void setScore(int score){this.score = score;}
+	
+
+}
+</code></pre>
+<p>Chess.java</p>
+<pre><code>
+//下棋业务核心类，与界面棋盘对应，业务放在这里，可以和界面代码分离
+public class Chess{
+	public static final int CHESSBOARD_SIZE = 15;
+	public static int FIRST = 1;//先手，-1表示机器，1表示人类，与Location类中的对应
+	private int[][] chessboard = new int[CHESSBOARD_SIZE][CHESSBOARD_SIZE];//与界面棋盘对应，0代表空，-1代表机器，1代表人类
+	private int[][] score = new int[CHESSBOARD_SIZE][CHESSBOARD_SIZE];//每个位置得分
+
+	public Chess(){}	
+	
+	public void init(){
+		FIRST = 1;//默认人类先手
+		for(int i = 0; i  &lt; CHESSBOARD_SIZE; i++){
+			for(int j = 0; j &lt; CHESSBOARD_SIZE; j++){
+				chessboard[i][j] = 0;
+				score[i][j] = 0;
+			}
+		}
+	}	
+	
+	//落子
+	public void addChessman(int x, int y, int owner){
+		chessboard[x][y] = owner;
+	}
+
+	//判断落子位置是否合法
+	public boolean isLegal(int x, int y){
+		if(x &gt;=0 &amp;&amp; x &lt; CHESSBOARD_SIZE &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; CHESSBOARD_SIZE &amp;&amp; chessboard[x][y] == 0){
+			return true;
+		}
+		return false;
+	}
+
+	//判断哪方赢了（必定有刚落的子引发，因此只需判断刚落子的周围），owner为-1代表机器，owner为1代表人类
+	public boolean isWin(int x, int y, int owner){
+		int sum = 0;
+		//判断横向左边
+		for(int i = x - 1; i &gt;= 0; i--){
+			if(chessboard[i][y] == owner){sum++;}
+			else{break;}
+		}	
+		//判断横向右边
+		for(int i = x + 1; i &lt; CHESSBOARD_SIZE; i++){
+			if(chessboard[i][y] == owner){sum++;}
+			else{break;}
+		}
+		if(sum &gt;= 4) {return true;}
+		
+		sum = 0;
+		//判断纵向上边
+		for(int i = y - 1; i &gt;= 0; i--){
+			if(chessboard[x][i] == owner){sum++;}
+			else{break;}
+		}
+		//判断纵向下边
+		for(int i = y + 1; i &lt; CHESSBOARD_SIZE; i++){
+			if(chessboard[x][i] == owner){sum++;}
+			else{break;}
+		}
+		if(sum &gt;= 4) {return true;}
+	
+		sum = 0;
+		//判断左上角到右下角方向上侧
+		for(int i = x - 1, j = y - 1; i &gt;= 0 &amp;&amp; j &gt;= 0; i--, j-- ){
+			if(chessboard[i][j] == owner){sum++;}
+			else{break;}
+		}
+		//判断左上角到右下角方向下侧
+		for(int i = x + 1, j = y + 1; i &lt; CHESSBOARD_SIZE &amp;&amp; j &lt; CHESSBOARD_SIZE; i++, j++ ){
+			if(chessboard[i][j] == owner){sum++;}
+			else{break;}
+		}
+		if(sum &gt;= 4) {return true;}
+		
+		sum = 0;
+		//判断右上角到左下角方向上侧
+		for(int i = x + 1, j = y - 1; i &lt; CHESSBOARD_SIZE &amp;&amp; j &gt;= 0; i++, j-- ){
+			if(chessboard[i][j] == owner){sum++;}
+			else{break;}
+		}
+		//判断右上角到左下角方向下侧
+		for(int i = x - 1, j = y + 1; i &gt;= 0 &amp;&amp; j &lt; CHESSBOARD_SIZE; i--, j++ ){
+			if(chessboard[i][j] == owner){sum++;}
+			else{break;}
+		}
+		if(sum &gt;= 4) {return true;}
+
+		return false;
+		
+	}
+
+
+	//【【【【【*******整个游戏的核心*******】】】】】______确定机器落子位置
+	//使用五元组评分算法，该算法参考博客地址：https://blog.csdn.net/u011587401/article/details/50877828
+	//算法思路：对15X15的572个五元组分别评分，一个五元组的得分就是该五元组为其中每个位置贡献的分数，
+	//	   一个位置的分数就是其所在所有五元组分数之和。所有空位置中分数最高的那个位置就是落子位置。
+	public Location searchLocation(){
+		//每次都初始化下score评分数组
+		for(int i = 0; i  &lt; CHESSBOARD_SIZE; i++){
+			for(int j = 0; j &lt; CHESSBOARD_SIZE; j++){
+				score[i][j] = 0;
+			}
+		}
+		
+		//每次机器找寻落子位置，评分都重新算一遍（虽然算了很多多余的，因为上次落子时候算的大多都没变）
+		//先定义一些变量
+		int humanChessmanNum = 0;//五元组中的黑棋数量
+		int machineChessmanNum = 0;//五元组中的白棋数量
+		int tupleScoreTmp = 0;//五元组得分临时变量
+		
+		int goalX = -1;//目标位置x坐标
+		int goalY = -1;//目标位置y坐标
+		int maxScore = -1;//最大分数
+
+		//1.扫描横向的15个行
+		for(int i = 0; i &lt; 15; i++){
+			for(int j = 0; j &lt; 11; j++){
+				int k = j;
+				while(k &lt; j + 5){
+					
+					if(chessboard[i][k] == -1) machineChessmanNum++;
+					else if(chessboard[i][k] == 1)humanChessmanNum++;
+				
+					k++;
+				}
+				tupleScoreTmp = tupleScore(humanChessmanNum, machineChessmanNum);
+				//为该五元组的每个位置添加分数
+				for(k = j; k &lt; j + 5; k++){
+					score[i][k] += tupleScoreTmp;
+				}
+				//置零
+				humanChessmanNum = 0;//五元组中的黑棋数量
+				machineChessmanNum = 0;//五元组中的白棋数量
+				tupleScoreTmp = 0;//五元组得分临时变量
+			}
+		}
+		
+		//2.扫描纵向15行
+		for(int i = 0; i &lt; 15; i++){
+			for(int j = 0; j &lt; 11; j++){
+				int k = j;
+				while(k &lt; j + 5){
+					if(chessboard[k][i] == -1) machineChessmanNum++;
+					else if(chessboard[k][i] == 1)humanChessmanNum++;
+				
+					k++;
+				}
+				tupleScoreTmp = tupleScore(humanChessmanNum, machineChessmanNum);
+				//为该五元组的每个位置添加分数
+				for(k = j; k &lt; j + 5; k++){
+					score[k][i] += tupleScoreTmp;
+				}
+				//置零
+				humanChessmanNum = 0;//五元组中的黑棋数量
+				machineChessmanNum = 0;//五元组中的白棋数量
+				tupleScoreTmp = 0;//五元组得分临时变量
+			}
+		}
+
+		//3.扫描右上角到左下角上侧部分
+		for(int i = 14; i &gt;= 4; i--){
+			for(int k = i, j = 0; j &lt; 15 &amp;&amp; k &gt;= 0; j++, k--){
+				int m = k;
+				int n = j;
+				while(m &gt; k - 5 &amp;&amp; k - 5 &gt;= -1){
+					if(chessboard[m][n] == -1) machineChessmanNum++;
+					else if(chessboard[m][n] == 1)humanChessmanNum++;
+					
+					m--;
+					n++;
+				}
+				//注意斜向判断的时候，可能构不成五元组（靠近四个角落），遇到这种情况要忽略掉
+				if(m == k-5){
+					tupleScoreTmp = tupleScore(humanChessmanNum, machineChessmanNum);
+					//为该五元组的每个位置添加分数
+					for(m = k, n = j; m &gt; k - 5 ; m--, n++){
+						score[m][n] += tupleScoreTmp;
+					}
+				}
+
+				//置零
+				humanChessmanNum = 0;//五元组中的黑棋数量
+				machineChessmanNum = 0;//五元组中的白棋数量
+				tupleScoreTmp = 0;//五元组得分临时变量
+
+			}
+		}
+		
+		//4.扫描右上角到左下角下侧部分
+		for(int i = 1; i &lt; 15; i++){
+			for(int k = i, j = 14; j &gt;= 0 &amp;&amp; k &lt; 15; j--, k++){
+				int m = k;
+				int n = j;
+				while(m &lt; k + 5 &amp;&amp; k + 5 &lt;= 15){
+					if(chessboard[n][m] == -1) machineChessmanNum++;
+					else if(chessboard[n][m] == 1)humanChessmanNum++;
+					
+					m++;
+					n--;
+				}
+				//注意斜向判断的时候，可能构不成五元组（靠近四个角落），遇到这种情况要忽略掉
+				if(m == k+5){
+					tupleScoreTmp = tupleScore(humanChessmanNum, machineChessmanNum);
+					//为该五元组的每个位置添加分数
+					for(m = k, n = j; m &lt; k + 5; m++, n--){
+						score[n][m] += tupleScoreTmp;
+					}
+				}
+				//置零
+				humanChessmanNum = 0;//五元组中的黑棋数量
+				machineChessmanNum = 0;//五元组中的白棋数量
+				tupleScoreTmp = 0;//五元组得分临时变量
+
+			}
+		}
+
+		//5.扫描左上角到右下角上侧部分
+		for(int i = 0; i &lt; 11; i++){
+			for(int k = i, j = 0; j &lt; 15 &amp;&amp; k &lt; 15; j++, k++){
+				int m = k;
+				int n = j;
+				while(m &lt; k + 5 &amp;&amp; k + 5 &lt;= 15){
+					if(chessboard[m][n] == -1) machineChessmanNum++;
+					else if(chessboard[m][n] == 1)humanChessmanNum++;
+					
+					m++;
+					n++;
+				}
+				//注意斜向判断的时候，可能构不成五元组（靠近四个角落），遇到这种情况要忽略掉
+				if(m == k + 5){
+					tupleScoreTmp = tupleScore(humanChessmanNum, machineChessmanNum);
+					//为该五元组的每个位置添加分数
+					for(m = k, n = j; m &lt; k + 5; m++, n++){
+						score[m][n] += tupleScoreTmp;
+					}
+				}
+
+				//置零
+				humanChessmanNum = 0;//五元组中的黑棋数量
+				machineChessmanNum = 0;//五元组中的白棋数量
+				tupleScoreTmp = 0;//五元组得分临时变量
+
+			}
+		}	
+	
+		//6.扫描左上角到右下角下侧部分
+		for(int i = 1; i &lt; 11; i++){
+			for(int k = i, j = 0; j &lt; 15 &amp;&amp; k &lt; 15; j++, k++){
+				int m = k;
+				int n = j;
+				while(m &lt; k + 5 &amp;&amp; k + 5 &lt;= 15){
+					if(chessboard[n][m] == -1) machineChessmanNum++;
+					else if(chessboard[n][m] == 1)humanChessmanNum++;
+					
+					m++;
+					n++;
+				}
+				//注意斜向判断的时候，可能构不成五元组（靠近四个角落），遇到这种情况要忽略掉
+				if(m == k + 5){
+					tupleScoreTmp = tupleScore(humanChessmanNum, machineChessmanNum);
+					//为该五元组的每个位置添加分数
+					for(m = k, n = j; m &lt; k + 5; m++, n++){
+						score[n][m] += tupleScoreTmp;
+					}
+				}
+
+				//置零
+				humanChessmanNum = 0;//五元组中的黑棋数量
+				machineChessmanNum = 0;//五元组中的白棋数量
+				tupleScoreTmp = 0;//五元组得分临时变量
+
+			}
+		}	
+	
+		//从空位置中找到得分最大的位置
+		for(int i = 0; i &lt; 15; i++){
+			for(int j = 0; j &lt; 15; j++){
+				if(chessboard[i][j] == 0 &amp;&amp; score[i][j] &gt; maxScore){
+					goalX = i;
+					goalY = j;
+					maxScore = score[i][j];
+				}
+			}
+		}		
+
+		if(goalX != -1 &amp;&amp; goalY != -1){
+			return new Location(goalX, goalY, -1);
+		}
+		
+		//没找到坐标说明平局了，笔者不处理平局
+		return new Location(-1, -1, -1);
+	}
+	
+	//各种五元组情况评分表
+	public int tupleScore(int humanChessmanNum, int machineChessmanNum){
+		//1.既有人类落子，又有机器落子，判分为0
+		if(humanChessmanNum &gt; 0 &amp;&amp; machineChessmanNum &gt; 0){
+			return 0;
+		}
+		//2.全部为空，没有落子，判分为7
+		if(humanChessmanNum == 0 &amp;&amp; machineChessmanNum == 0){
+			return 7;
+		}
+		//3.机器落1子，判分为35
+		if(machineChessmanNum == 1){
+			return 35;
+		}
+		//4.机器落2子，判分为800
+		if(machineChessmanNum == 2){
+			return 800;
+		}
+		//5.机器落3子，判分为15000
+		if(machineChessmanNum == 3){
+			return 15000;
+		}
+		//6.机器落4子，判分为800000
+		if(machineChessmanNum == 4){
+			return 800000;
+		}
+		//7.人类落1子，判分为15
+		if(humanChessmanNum == 1){
+			return 15;
+		}
+		//8.人类落2子，判分为400
+		if(humanChessmanNum == 2){
+			return 400;
+		}
+		//9.人类落3子，判分为1800
+		if(humanChessmanNum == 3){
+			return 1800;
+		}
+		//10.人类落4子，判分为100000
+		if(humanChessmanNum == 4){
+			return 100000;
+		}
+		return -1;//若是其他结果肯定出错了。这行代码根本不可能执行
+	}
+	
+}
+</code></pre>
+
+    </div>
+  </div>
+</body>
+
+</html>
